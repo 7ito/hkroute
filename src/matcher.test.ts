@@ -141,6 +141,8 @@ describe("mapAgency", () => {
     assert.equal(mapAgency("Light Rail"), "lightRail");
     assert.equal(mapAgency("GMB"), "gmb");
     assert.equal(mapAgency("LRT Feeder Bus"), "lrtfeeder");
+    assert.equal(mapAgency("Citybus Limited"), "ctb");
+    assert.equal(mapAgency("Green Minibus"), "gmb");
   });
 
   it("handles case-insensitive matching", () => {

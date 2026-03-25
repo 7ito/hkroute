@@ -51,6 +51,7 @@ export async function getDirections(
       mode: TravelMode.transit,
       alternatives: true,
       departure_time: departureTime ?? "now",
+      region: "hk",
       key: apiKey,
     },
   });
@@ -71,7 +72,7 @@ export async function getDirections(
     const googleLeg = route.legs[0];
 
     const legs: RouteLeg[] = googleLeg.steps.map((step) => {
-      if (step.travel_mode === TravelMode.walking) {
+      if (String(step.travel_mode).toLowerCase() === TravelMode.walking) {
         return {
           type: "walk" as LegType,
           route_number: null,

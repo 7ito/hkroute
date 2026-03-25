@@ -16,6 +16,7 @@ const AGENCY_TO_COMPANY: Record<string, Company> = {
   "KMB": "kmb",
   "Kowloon Motor Bus": "kmb",
   "Citybus": "ctb",
+  "Citybus Limited": "ctb",
   "CTB": "ctb",
   "New Lantao Bus": "nlb",
   "NLB": "nlb",
