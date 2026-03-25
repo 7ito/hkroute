@@ -30,6 +30,15 @@ function parseArgs(args: string[]): {
   return result;
 }
 
+const COORD_RE = /^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/;
+
+/** Append ", Hong Kong" to text inputs so Google can geocode ambiguous names like "Stanley". */
+function qualifyLocation(input: string): string {
+  if (COORD_RE.test(input)) return input;
+  if (/hong\s*kong/i.test(input)) return input;
+  return `${input}, Hong Kong`;
+}
+
 function exitWithError(code: ErrorOutput["code"], message: string): never {
   const output: ErrorOutput = { error: true, code, message };
   console.log(JSON.stringify(output, null, 2));
@@ -123,7 +132,7 @@ async function main() {
   }
 
   try {
-    const routes = await getDirections(origin, destination, apiKey, departureDate);
+    const routes = await getDirections(qualifyLocation(origin), qualifyLocation(destination), apiKey, departureDate);
 
     // Enrich bus legs with real-time ETAs (matcher + ETA module)
     let enrichedRoutes = routes;
