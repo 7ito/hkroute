@@ -1,6 +1,6 @@
 export type LegType = "bus" | "mtr" | "walk" | "ferry" | "light_rail" | "tram" | "other";
 
-export type EtaSource = "schedule" | "realtime";
+export type EtaSource = "schedule" | "realtime" | "unavailable";
 
 export interface RouteLeg {
   type: LegType;
@@ -29,6 +29,10 @@ export interface Route {
   recommended: boolean;
   total_duration_seconds: number;
   effective_duration_seconds: number;
+  /** Minutes until first bus of the first bus leg (0 if first leg is walk/MTR) */
+  wait_time_min: number;
+  /** wait_time_min + total_duration_min — used as ranking key */
+  effective_total_min: number;
   departure_time: string | null;
   arrival_time: string | null;
   legs: RouteLeg[];

@@ -1,6 +1,9 @@
 import { getDirections } from "./directions.js";
+import type { DirectionsRoute } from "./directions.js";
 import { formatRoutes } from "./formatter.js";
-import type { ErrorOutput } from "./types.js";
+import { loadEtaDb, getRealtimeEta } from "./eta.js";
+import { matchStop, mapAgency } from "./matcher.js";
+import type { ErrorOutput, RouteLeg, EtaSource } from "./types.js";
 
 function parseArgs(args: string[]): {
   origin: string | null;
@@ -33,6 +36,72 @@ function exitWithError(code: ErrorOutput["code"], message: string): never {
   return process.exit(1) as never;
 }
 
+/** Enrich bus/transit legs with real-time ETAs via matcher + ETA module */
+async function enrichRoutes(routes: DirectionsRoute[]): Promise<DirectionsRoute[]> {
+  const etaDb = await loadEtaDb();
+
+  const enriched = await Promise.all(
+    routes.map(async (route) => {
+      const enrichedLegs = await Promise.all(
+        route.legs.map(async (leg) => {
+          // Only enrich transit legs that have a route number and operator
+          if (leg.type === "walk" || !leg.route_number || !leg.operator || !leg.departure_location) {
+            return leg;
+          }
+
+          // MTR/subway: skip ETA enrichment (high frequency)
+          const company = mapAgency(leg.operator);
+          if (!company || company === "mtr") {
+            return leg;
+          }
+
+          // Step 1: Match the Google Maps stop to an hk-bus-eta stop ID
+          const match = matchStop(
+            etaDb,
+            leg.route_number,
+            leg.operator,
+            leg.departure_location.lat,
+            leg.departure_location.lng,
+          );
+
+          if (!match) {
+            // Unmatched route → keep schedule data
+            return leg;
+          }
+
+          // Step 2: Fetch real-time ETA for the matched stop
+          const etas = await getRealtimeEta(etaDb, company, leg.route_number, match.stopId);
+
+          if (etas === null) {
+            // Operator skipped (e.g. MTR) — shouldn't reach here but handle gracefully
+            return leg;
+          }
+
+          if (etas.length === 0) {
+            // ETA unavailable (late night, no service, etc.)
+            return {
+              ...leg,
+              eta_source: "unavailable" as EtaSource,
+              etas: [],
+            };
+          }
+
+          // Enrich with real-time data
+          return {
+            ...leg,
+            eta_source: "realtime" as EtaSource,
+            etas: etas.map((e) => e.eta),
+          };
+        }),
+      );
+
+      return { ...route, legs: enrichedLegs };
+    }),
+  );
+
+  return enriched;
+}
+
 async function main() {
   const { origin, destination, departureTime } = parseArgs(process.argv.slice(2));
 
@@ -55,7 +124,19 @@ async function main() {
 
   try {
     const routes = await getDirections(origin, destination, apiKey, departureDate);
-    const output = formatRoutes(routes, origin, destination);
+
+    // Enrich bus legs with real-time ETAs (matcher + ETA module)
+    let enrichedRoutes = routes;
+    try {
+      enrichedRoutes = await enrichRoutes(routes);
+    } catch (err) {
+      // ETA enrichment failure is non-fatal — fall back to schedule data
+      process.stderr.write(
+        `[eta] Enrichment failed, using schedule data: ${err instanceof Error ? err.message : String(err)}\n`,
+      );
+    }
+
+    const output = formatRoutes(enrichedRoutes, origin, destination);
     console.log(JSON.stringify(output, null, 2));
 
     if (output.error) {

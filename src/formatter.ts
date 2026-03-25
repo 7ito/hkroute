@@ -1,5 +1,5 @@
 import type { DirectionsRoute } from "./directions.js";
-import type { Route, SuccessOutput, ErrorOutput, Output } from "./types.js";
+import type { Route, RouteLeg, SuccessOutput, ErrorOutput, Output } from "./types.js";
 
 const MAX_ROUTES = 4;
 
@@ -17,6 +17,26 @@ function markActionableLegs(route: Route): Route {
   };
 }
 
+/**
+ * Calculate minutes until the first bus of the first bus leg.
+ * Returns 0 if first leg is walk/MTR or no bus legs exist.
+ */
+function calculateWaitTimeMin(legs: RouteLeg[]): number {
+  const firstBusLeg = legs.find((leg) => leg.type === "bus");
+  if (!firstBusLeg) return 0;
+
+  // If we have real-time ETAs, use the first one
+  if (firstBusLeg.eta_source === "realtime" && firstBusLeg.etas && firstBusLeg.etas.length > 0) {
+    const etaTime = new Date(firstBusLeg.etas[0]).getTime();
+    const now = Date.now();
+    const minutes = Math.max(0, Math.round((etaTime - now) / 60000));
+    return minutes;
+  }
+
+  // No real-time data — wait time is unknown, assume 0 (schedule-based)
+  return 0;
+}
+
 export function formatRoutes(
   directionsRoutes: DirectionsRoute[],
   origin: string,
@@ -31,19 +51,26 @@ export function formatRoutes(
     } satisfies ErrorOutput;
   }
 
-  // Build Route objects and rank by total duration
+  // Build Route objects with effective time calculations
   const routes: Route[] = directionsRoutes
-    .map((dr) => ({
-      rank: 0,
-      recommended: false,
-      total_duration_seconds: dr.total_duration_seconds,
-      // Without real-time ETAs, effective = total (Google's schedule-based estimate)
-      effective_duration_seconds: dr.total_duration_seconds,
-      departure_time: dr.departure_time,
-      arrival_time: dr.arrival_time,
-      legs: dr.legs,
-    }))
-    .sort((a, b) => a.effective_duration_seconds - b.effective_duration_seconds)
+    .map((dr) => {
+      const waitTimeMin = calculateWaitTimeMin(dr.legs);
+      const totalDurationMin = Math.round(dr.total_duration_seconds / 60);
+      const effectiveTotalMin = waitTimeMin + totalDurationMin;
+
+      return {
+        rank: 0,
+        recommended: false,
+        total_duration_seconds: dr.total_duration_seconds,
+        effective_duration_seconds: dr.total_duration_seconds,
+        wait_time_min: waitTimeMin,
+        effective_total_min: effectiveTotalMin,
+        departure_time: dr.departure_time,
+        arrival_time: dr.arrival_time,
+        legs: dr.legs,
+      };
+    })
+    .sort((a, b) => a.effective_total_min - b.effective_total_min)
     .slice(0, MAX_ROUTES)
     .map((route, i) => markActionableLegs({ ...route, rank: i + 1, recommended: i === 0 }));
 
