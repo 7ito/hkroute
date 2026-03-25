@@ -1,0 +1,29 @@
+{
+  "name": "hk-route",
+  "version": "1.0.0",
+  "description": "Smart public transport routing for Hong Kong with real-time bus ETAs",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/7ito/hkroute.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/7ito/hkroute/issues"
+  },
+  "homepage": "https://github.com/7ito/hkroute#readme",
+  "dependencies": {
+    "@googlemaps/google-maps-services-js": "^3.4.2",
+    "@types/node": "^25.5.0",
+    "hk-bus-eta": "^3.7.8",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  }
+}
