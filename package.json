@@ -5,7 +5,7 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --platform=node --format=cjs --outfile=scripts/hk-route.cjs --banner:js='#!/usr/bin/env node'",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=cjs --outfile=skill/scripts/hk-route.cjs --banner:js='#!/usr/bin/env node'",
     "start": "tsx src/index.ts",
     "test": "tsx --test src/**/*.test.ts"
   },
