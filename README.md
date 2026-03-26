@@ -1,5 +1,7 @@
 # HK Route
 
+[![ClawHub](https://img.shields.io/badge/ClawHub-7ito%2Fhkroute-blue)](https://clawhub.ai/7ito/hkroute)
+
 Smart public transport routing for Hong Kong with real-time bus ETAs.
 
 Combines Google Maps transit directions with live bus arrival times from [hk-bus-eta](https://github.com/nicanderhery/hk-bus-eta), then ranks routes by **effective total time** (real wait + travel duration) instead of schedule data alone.
