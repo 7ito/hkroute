@@ -11,6 +11,8 @@ triggers:
   - public transport Hong Kong
   - HK route
   - getting to .* from
+metadata:
+  { "openclaw": { "requires": { "env": ["GOOGLE_MAPS_API_KEY"], "bins": ["node"] }, "primaryEnv": "GOOGLE_MAPS_API_KEY", "homepage": "https://clawhub.ai/7ito/hkroute" } }
 ---
 
 # HK Route — Hong Kong Transit Routing with Real-Time ETAs
