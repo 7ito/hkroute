@@ -3,6 +3,31 @@ import type { Route, RouteLeg, SuccessOutput, ErrorOutput, Output } from "./type
 
 const MAX_ROUTES = 4;
 
+/**
+ * Generate a signature string for a route based on its leg structure.
+ * Two routes with the same signature are the same itinerary
+ * (possibly at different departure times).
+ */
+function routeSignature(legs: RouteLeg[]): string {
+  return legs
+    .map((leg) => `${leg.type}:${leg.route_number ?? ""}:${leg.departure_stop ?? ""}:${leg.arrival_stop ?? ""}`)
+    .join("|");
+}
+
+/**
+ * Remove near-identical routes, keeping only the first (best) variant.
+ * Must be called AFTER sorting so the kept route is the best-ranked.
+ */
+function deduplicateRoutes(routes: Route[]): Route[] {
+  const seen = new Set<string>();
+  return routes.filter((route) => {
+    const sig = routeSignature(route.legs);
+    if (seen.has(sig)) return false;
+    seen.add(sig);
+    return true;
+  });
+}
+
 function markActionableLegs(route: Route): Route {
   let foundFirstBus = false;
   return {
@@ -70,7 +95,10 @@ export function formatRoutes(
         legs: dr.legs,
       };
     })
-    .sort((a, b) => a.effective_total_min - b.effective_total_min)
+    .sort((a, b) => a.effective_total_min - b.effective_total_min);
+
+  // Deduplicate after sorting so we keep the best variant of each itinerary
+  const deduplicated = deduplicateRoutes(routes)
     .slice(0, MAX_ROUTES)
     .map((route, i) => markActionableLegs({ ...route, rank: i + 1, recommended: i === 0 }));
 
@@ -79,6 +107,6 @@ export function formatRoutes(
     origin,
     destination,
     queried_at: new Date().toISOString(),
-    routes,
+    routes: deduplicated,
   } satisfies SuccessOutput;
 }

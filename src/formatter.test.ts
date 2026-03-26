@@ -85,9 +85,9 @@ describe("formatRoutes", () => {
 
   it("ranks routes by effective_total_min (shortest first)", () => {
     const routes: DirectionsRoute[] = [
-      makeRoute([makeBusLeg({ duration_seconds: 2400 })], 2400), // 40 min
-      makeRoute([makeBusLeg({ duration_seconds: 1200 })], 1200), // 20 min
-      makeRoute([makeBusLeg({ duration_seconds: 1800 })], 1800), // 30 min
+      makeRoute([makeBusLeg({ route_number: "6X", duration_seconds: 2400 })], 2400), // 40 min
+      makeRoute([makeBusLeg({ route_number: "14", duration_seconds: 1200 })], 1200), // 20 min
+      makeRoute([makeBusLeg({ route_number: "260", duration_seconds: 1800 })], 1800), // 30 min
     ];
 
     const result = formatRoutes(routes, "A", "B") as SuccessOutput;
@@ -106,6 +106,7 @@ describe("formatRoutes", () => {
     // Route A: 20 min travel, 15 min real-time wait → 35 min effective
     const routeA = makeRoute(
       [makeBusLeg({
+        route_number: "6X",
         eta_source: "realtime",
         etas: [new Date(now + 15 * 60000).toISOString()],
         duration_seconds: 1200,
@@ -114,7 +115,7 @@ describe("formatRoutes", () => {
     );
     // Route B: 30 min travel, 0 wait (schedule) → 30 min effective
     const routeB = makeRoute(
-      [makeBusLeg({ duration_seconds: 1800 })],
+      [makeBusLeg({ route_number: "14", duration_seconds: 1800 })],
       1800,
     );
 
@@ -125,8 +126,9 @@ describe("formatRoutes", () => {
   });
 
   it("caps output at 4 routes", () => {
+    const routeNumbers = ["6X", "14", "260", "307", "968", "A11"];
     const routes = Array.from({ length: 6 }, (_, i) =>
-      makeRoute([makeBusLeg({ duration_seconds: (i + 1) * 600 })], (i + 1) * 600),
+      makeRoute([makeBusLeg({ route_number: routeNumbers[i], duration_seconds: (i + 1) * 600 })], (i + 1) * 600),
     );
 
     const result = formatRoutes(routes, "A", "B") as SuccessOutput;
@@ -140,8 +142,8 @@ describe("formatRoutes", () => {
 
   it("marks only the first-ranked route as recommended", () => {
     const routes = [
-      makeRoute([makeBusLeg({ duration_seconds: 1200 })], 1200),
-      makeRoute([makeBusLeg({ duration_seconds: 1800 })], 1800),
+      makeRoute([makeBusLeg({ route_number: "6X", duration_seconds: 1200 })], 1200),
+      makeRoute([makeBusLeg({ route_number: "14", duration_seconds: 1800 })], 1800),
     ];
 
     const result = formatRoutes(routes, "A", "B") as SuccessOutput;
@@ -217,6 +219,45 @@ describe("formatRoutes", () => {
     assert.equal(result.destination, "Stanley");
     assert.ok(result.queried_at); // ISO string
     assert.ok(new Date(result.queried_at).getTime() > 0);
+  });
+
+  // ── Tests: Deduplication ──
+
+  it("deduplicates routes with identical leg structure", () => {
+    // Two routes with same legs but different departure times (Google schedule variants)
+    const legs = [makeWalkLeg(), makeBusLeg({ route_number: "58" }), makeMtrLeg()];
+    const routeA = makeRoute(legs, 2400);
+    const routeB: DirectionsRoute = { ...makeRoute(legs, 2400), departure_time: "11:00 AM", arrival_time: "11:40 AM" };
+
+    const result = formatRoutes([routeA, routeB], "A", "B") as SuccessOutput;
+    assert.equal(result.routes.length, 1); // collapsed to one
+  });
+
+  it("keeps distinct routes that share some legs but differ in others", () => {
+    const routeA = makeRoute(
+      [makeBusLeg({ route_number: "6X" }), makeMtrLeg({ route_number: "Island Line" })],
+      2400,
+    );
+    const routeB = makeRoute(
+      [makeBusLeg({ route_number: "260" }), makeMtrLeg({ route_number: "Island Line" })],
+      2400,
+    );
+
+    const result = formatRoutes([routeA, routeB], "A", "B") as SuccessOutput;
+    assert.equal(result.routes.length, 2); // different bus routes → kept
+  });
+
+  it("keeps the best-ranked variant when deduplicating", () => {
+    const now = Date.now();
+    const legs = [makeBusLeg({ route_number: "58", eta_source: "schedule", etas: null })];
+    // Route A: 30 min travel, 0 wait → 30 min effective
+    const routeA = makeRoute(legs, 1800);
+    // Route B: same legs, 35 min travel → 35 min effective
+    const routeB = makeRoute(legs, 2100);
+
+    const result = formatRoutes([routeB, routeA], "A", "B") as SuccessOutput;
+    assert.equal(result.routes.length, 1);
+    assert.equal(result.routes[0].effective_total_min, 30); // kept the faster one
   });
 
   it("preserves departure_time and arrival_time from directions", () => {

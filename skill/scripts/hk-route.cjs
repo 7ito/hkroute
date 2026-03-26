@@ -31785,6 +31785,18 @@ async function getDirections(origin, destination, apiKey, departureTime) {
 
 // src/formatter.ts
 var MAX_ROUTES = 4;
+function routeSignature(legs) {
+  return legs.map((leg) => `${leg.type}:${leg.route_number ?? ""}:${leg.departure_stop ?? ""}:${leg.arrival_stop ?? ""}`).join("|");
+}
+function deduplicateRoutes(routes) {
+  const seen = /* @__PURE__ */ new Set();
+  return routes.filter((route) => {
+    const sig = routeSignature(route.legs);
+    if (seen.has(sig)) return false;
+    seen.add(sig);
+    return true;
+  });
+}
 function markActionableLegs(route) {
   let foundFirstBus = false;
   return {
@@ -31832,13 +31844,14 @@ function formatRoutes(directionsRoutes, origin, destination) {
       arrival_time: dr.arrival_time,
       legs: dr.legs
     };
-  }).sort((a, b) => a.effective_total_min - b.effective_total_min).slice(0, MAX_ROUTES).map((route, i) => markActionableLegs({ ...route, rank: i + 1, recommended: i === 0 }));
+  }).sort((a, b) => a.effective_total_min - b.effective_total_min);
+  const deduplicated = deduplicateRoutes(routes).slice(0, MAX_ROUTES).map((route, i) => markActionableLegs({ ...route, rank: i + 1, recommended: i === 0 }));
   return {
     error: false,
     origin,
     destination,
     queried_at: (/* @__PURE__ */ new Date()).toISOString(),
-    routes
+    routes: deduplicated
   };
 }
 
