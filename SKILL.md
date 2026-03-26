@@ -26,10 +26,12 @@ Finds the best public transport route in Hong Kong by combining Google Maps dire
 ## How to invoke
 
 ```bash
-npx tsx ~/Projects/hk-route/src/index.ts \
+node ~/Projects/hk-route/scripts/hk-route.cjs \
   --origin "<origin>" \
   --destination "<destination>"
 ```
+
+> **Build first:** run `npm run build` in `~/Projects/hk-route` to bundle into `scripts/hk-route.cjs`.
 
 ### Optional flags
 
