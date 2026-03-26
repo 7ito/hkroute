@@ -21,7 +21,25 @@ Finds the best public transport route in Hong Kong by combining Google Maps dire
 
 ## Required environment
 
-- `GOOGLE_MAPS_API_KEY` must be set in the environment.
+| Requirement | Details |
+|---|---|
+| `GOOGLE_MAPS_API_KEY` | Google Maps API key with Directions API enabled |
+| `node` >= 18 | Runtime for the bundled script |
+
+## External endpoints
+
+This skill makes network requests to:
+
+| Endpoint | Purpose | Credentials |
+|---|---|---|
+| `maps.googleapis.com` (Google Directions API) | Transit route planning | `GOOGLE_MAPS_API_KEY` |
+| HK government & operator APIs via [hk-bus-eta](https://github.com/hkbus/hk-bus-eta) (DATA.GOV.HK, KMB, CTB, etc.) | Real-time bus arrival times | None (public APIs) |
+
+No other network calls are made. The ETA database is cached locally at `~/.cache/hk-route/etaDb.json` (refreshed every 24h).
+
+## Source code
+
+The bundled `scripts/hk-route.cjs` is built from readable TypeScript source at [github.com/7ito/hkroute](https://github.com/7ito/hkroute). Build command: `esbuild src/index.ts --bundle --platform=node --format=cjs`.
 
 ## How to invoke
 
