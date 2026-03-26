@@ -11,7 +11,15 @@ Combines Google Maps transit directions with live bus arrival times from [hk-bus
 3. Fetches real-time ETAs for matched stops
 4. Ranks routes by `wait_time + travel_duration` and returns the top 4
 
-## Install as an OpenClaw / Claude Code skill
+## Installation
+
+### From ClawHub
+
+```bash
+npx clawhub@latest install 7ito/hkroute
+```
+
+### Manual (OpenClaw / Claude Code skill)
 
 The `skill/` directory is self-contained and ready to use as an [OpenClaw](https://openclaw.org) skill (also compatible with [Claude Code skills](https://docs.anthropic.com/en/docs/claude-code/skills)):
 
@@ -22,7 +30,9 @@ skill/
     hk-route.cjs    # Bundled CLI — no npm install needed, just Node >= 18
 ```
 
-Copy or symlink `skill/` into your skills directory, set `GOOGLE_MAPS_API_KEY` in your environment, and you're good to go.
+Copy or symlink `skill/` into your skills directory.
+
+Both methods require `GOOGLE_MAPS_API_KEY` set in your environment.
 
 ## CLI usage
 
@@ -78,4 +88,4 @@ src/
 
 ## License
 
-ISC
+[MIT-0](LICENSE)
