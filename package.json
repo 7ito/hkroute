@@ -1,6 +1,6 @@
 {
   "name": "hk-route",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Smart public transport routing for Hong Kong with real-time bus ETAs",
   "type": "module",
   "main": "src/index.ts",
